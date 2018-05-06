@@ -51,6 +51,26 @@ Element.prototype.drawXY = function(x, y) {
 	ctx.fillText(this.value, x + this.hl, y + this.hl);
 };
 
+Element.prototype.fill = function(m, n) {
+	var cord = this.getXY(m, n);
+	this.fillXY(cord.x, cord.y);
+};
+
+Element.prototype.fillXY = function(x, y) {
+	ctx.fillRect(x, y, length, length);
+	setColor("white");
+	ctx.fillText(this.value, x + this.hl, y + this.hl);
+};
+
+Element.prototype.clear = function(m, n) {
+	var cord = this.getXY(m, n);
+	ctx.clearRect(cord.x - 1, cord.y - 1, length + 2, length + 2);
+}
+
+Element.prototype.move = function(m1, n1, m2, n2) {
+	
+};
+
 function Data(size) {
 	this.data = Array(size);
 	this.line;
@@ -61,6 +81,7 @@ function Data(size) {
 		left: false
 	});
 	this.id;
+	this.status;
 	var sup = size << 2;
 	for (i = 0; i < size; i++) {
 		this.data[i] = new Element(Math.floor(Math.random() * sup));
@@ -71,15 +92,17 @@ Data.prototype.md = margin + distance;
 Data.prototype.m2d = Data.prototype.md + margin;
 Data.prototype.dl = distance + length;
 
-Data.prototype.compare = function(a, b) {
-	return this.data[a] < this.data[b];
-};
-
 Data.prototype.swap = function(a, b, c) {
-	var tmp = this.data[c];
-	this.data[c] = this.data[b];
-	this.data[b] = this.data[a];
-	this.data[a] = tmp;
+	if (b == c) {
+		var tmp = this.data[b];
+		this.data[b] = this.data[a];
+		this.data[a] = tmp;
+	} else {
+		var tmp = this.data[c];
+		this.data[c] = this.data[b];
+		this.data[b] = this.data[a];
+		this.data[a] = tmp;
+	}
 };
 
 Data.prototype.stopSort = function() {
@@ -98,39 +121,37 @@ Data.prototype.quickSort = function() {
 		return;
 	}
 	var last = this.stack[this.stack.length - 1];
-	var lastLast = this.stack[this.stack.length - 2];
 	var size = last.end - last.begin;
+
+	if (this.status != undefined) {
+		this.drawFocus();
+		if (this.status.i == this.data.length) {
+			this.stack.push({
+				begin: last.begin,
+				end: this.status.flag,
+				left: true
+			});
+			this.status = undefined;
+			return;
+		}
+		while (this.status.i < this.data.length) {
+			if (this.data[this.status.i] < this.data[this.status.flag]) {
+				this.swap(this.status.flag, this.status.flag + 1, this.status.i);
+				this.status.flag ++;
+				this.status.i ++;
+				return;
+			}
+			this.status.i ++;
+		}
+		return;
+	}
+
 	if (size > 1) {
-		if (this.stack.length > 1) {
-			var args = [];
-			if (last.left) {
-				args.push(ArgColor(last.begin, "black"));
-				args.push(ArgColor(last.end, "red"));
-				args.push(ArgColor(last.end + 1, "blue"));
-				args.push(ArgColor(lastLast.end, "gray"));
-			} else {
-				args.push(ArgColor(last.begin - 1, "red"));
-				args.push(ArgColor(last.begin, "black"));
-				args.push(ArgColor(last.end, "gray"));
-			}
-			this.refresh ("green", args);
-			this.strokeElement(lastLast.begin, lastLast.end, "gray");
-		} else {
-			this.refresh ("black", []);
+		this.drawOther();
+		this.status = {
+			i: last.begin + 1,
+			flag: last.begin,
 		}
-		this.strokeElement(last.begin, last.end, "black");
-		var flag = last.begin;
-		for (i = last.begin + 1; i < last.end; i++) {
-			if (this.compare(i, flag)) {
-				this.swap(flag, flag + 1, i);
-				flag ++;
-			}
-		}
-		this.stack.push({
-			begin: last.begin,
-			end: flag,
-			left: true
-		});
 	} else {
 		var tmp;
 		do {
@@ -143,8 +164,8 @@ Data.prototype.quickSort = function() {
 				left: false
 			});
 		}
-		this.quickSort();
 	}
+	this.quickSort();
 };
 
 function ArgColor(start, color) {
@@ -154,12 +175,21 @@ function ArgColor(start, color) {
 	};
 }
 
+Data.prototype.toCord = function(i) {
+	var n = Math.floor(focus.begin / this.line);
+	var m = focus.begin - n * this.line;
+	return {
+		n: n,
+		m: m
+	}
+}
+
 Data.prototype.refresh = function(color, args) {
 	this.line = Math.floor((frame.width - this.m2d) / this.dl);
 	this.row = Math.ceil(this.data.length / this.line);
 	frame.height = this.m2d + this.row * this.dl;
 	setColor(color);
-	flag = 0;
+	var flag = 0;
 	var i = 0;
 	for (n = 0; n < this.row; n++) {
 		for (m = 0; m < this.line; m++) {
@@ -179,6 +209,51 @@ Data.prototype.refresh = function(color, args) {
 		}
 	}
 };
+
+Data.prototype.drawOther = function() {
+	var last = this.stack[this.stack.length - 1];
+	var lastLast = this.stack[this.stack.length - 2];
+	if (this.stack.length > 1) {
+		var args = [];
+		if (last.left) {
+			args.push(ArgColor(last.begin, "white"));
+			args.push(ArgColor(last.end, "black"));
+			args.push(ArgColor(last.end + 1, "red"));
+			args.push(ArgColor(lastLast.end, "gray"));
+		} else {
+			args.push(ArgColor(last.begin - 1, "black"));
+			args.push(ArgColor(last.begin, "white"));
+			args.push(ArgColor(last.end, "gray"));
+		}
+		this.refresh ("green", args);
+		this.strokeElement(lastLast.begin, lastLast.end, "gray");
+	} else {
+		this.refresh ("white", []);
+	}
+	this.strokeElement(last.begin, last.end, "black");
+}
+
+Data.prototype.drawFocus = function() {
+	var focus = this.stack[this.stack.length - 1];
+	var flag = this.data[this.status.flag];
+	var n = Math.floor(focus.begin / this.line);
+	var m = focus.begin - n * this.line;
+	for (i = focus.begin; i < focus.end; i++) {
+		if (this.data[i] > flag) {
+			setColor("red");
+		} else if (this.data[i] < flag) {
+			setColor("green");
+		} else {
+			setColor("black");
+		}
+		this.data[i].fill(m, n);
+		m ++;
+		if (m == this.line) {
+			m = 0;
+			n ++;
+		}
+	}
+}
 
 Data.prototype.strokeElement = function(begin, end, color) {
 	bn = Math.floor(begin / this.line);
@@ -230,7 +305,6 @@ function resizeCanvas() {
 	} else {
 		data.refresh("black", []);
 	}
-	
 }
 
 window.onresize = resizeCanvas;
