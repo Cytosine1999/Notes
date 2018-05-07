@@ -9,6 +9,12 @@ var margin = 6;
 var distance = 6;
 var length = 40;
 
+function path(begin, end, current, time){
+	var x = begin.x + Math.round((end.x - begin.x) * (current / time));
+	var y = begin.y + Math.round((end.y - begin.y) * (current / time));
+	return {x:x, y:y};
+}
+
 function setColor(color) {
 	ctx.font = "bold 12pt sans-serif";
 	ctx.textAlign = "center";
@@ -19,6 +25,12 @@ function setColor(color) {
 
 function Element(value) {
 	this.value = value;
+	this.time;
+	this.path;
+	this.current;
+	this.begin;
+	this.end;
+	this.color;
 }
 
 Element.prototype.dl = distance + length;
@@ -65,11 +77,29 @@ Element.prototype.fillXY = function(x, y) {
 Element.prototype.clear = function(m, n) {
 	var cord = this.getXY(m, n);
 	ctx.clearRect(cord.x - 1, cord.y - 1, length + 2, length + 2);
-}
-
-Element.prototype.move = function(m1, n1, m2, n2) {
-	
 };
+
+function frames() {
+	if (data.status != undefined && data.status.move != undefined && data.status.current < data.status.time) {
+		data.status.current += 40;
+		ctx.putImageData(data.status.undo, 0, 0);
+		for (each of data.status.move) {
+			var start = data.toCord(each[0]);
+			var end = data.toCord(each[1]);
+			start = Element.prototype.getXY(start.m, start.n);
+			end = Element.prototype.getXY(end.m, end.n);
+			var cord = path(start, end, data.status.current, data.status.time);
+			if (data.data[each[1]] > data.data[data.status.flag]) {
+				setColor("red");
+			} else if (data.data[each[1]] < data.data[data.status.flag]) {
+				setColor("green");
+			} else {
+				setColor("black");
+			}
+			data.data[each[1]].fillXY(cord.x, cord.y);
+		}
+	}
+}
 
 function Data(size) {
 	this.data = Array(size);
@@ -81,6 +111,7 @@ function Data(size) {
 		left: false
 	});
 	this.id;
+	this.moveId;
 	this.status;
 	var sup = size << 2;
 	for (i = 0; i < size; i++) {
@@ -93,30 +124,25 @@ Data.prototype.m2d = Data.prototype.md + margin;
 Data.prototype.dl = distance + length;
 
 Data.prototype.swap = function(a, b, c) {
-	if (b == c) {
-		var tmp = this.data[b];
-		this.data[b] = this.data[a];
-		this.data[a] = tmp;
-	} else {
-		var tmp = this.data[c];
-		this.data[c] = this.data[b];
-		this.data[b] = this.data[a];
-		this.data[a] = tmp;
-	}
+	var tmp = this.data[c];
+	this.data[c] = this.data[b];
+	this.data[b] = this.data[a];
+	this.data[a] = tmp;
 };
 
 Data.prototype.stopSort = function() {
-	window.clearInterval(this.id);
 	if (this.id != undefined) {
+		window.clearInterval(this.id);
+		window.clearInterval(this.moveId);
+		window.onresize = resizeCanvas;
 		this.id = undefined;
 		sort.disabled = false;
 	}
-}
+};
 
 Data.prototype.quickSort = function() {
 	if (this.stack.length == 0) {
 		this.stopSort();
-		window.onresize = resizeCanvas;
 		setTimeout("resizeCanvas();", 1000);
 		return;
 	}
@@ -124,6 +150,7 @@ Data.prototype.quickSort = function() {
 	var size = last.end - last.begin;
 
 	if (this.status != undefined) {
+		this.drawOther();
 		this.drawFocus();
 		if (this.status.i == this.data.length) {
 			this.stack.push({
@@ -136,7 +163,21 @@ Data.prototype.quickSort = function() {
 		}
 		while (this.status.i < this.data.length) {
 			if (this.data[this.status.i] < this.data[this.status.flag]) {
+				this.clear(this.status.flag);
+				this.clear(this.status.flag + 1);
+				this.clear(this.status.i);
+				this.status.undo = ctx.getImageData(0, 0, frame.width, frame.height);
 				this.swap(this.status.flag, this.status.flag + 1, this.status.i);
+				this.status.move = [];
+				this.status.current = 0;
+				if (this.status.flag + 1 == this.status.i) {
+					this.status.move.push([this.status.flag, this.status.flag + 1]);
+					this.status.move.push([this.status.flag + 1, this.status.flag]);
+				} else {
+					this.status.move.push([this.status.flag, this.status.flag + 1]);
+					this.status.move.push([this.status.flag + 1, this.status.i]);
+					this.status.move.push([this.status.i, this.status.flag]);
+				}
 				this.status.flag ++;
 				this.status.i ++;
 				return;
@@ -151,6 +192,10 @@ Data.prototype.quickSort = function() {
 		this.status = {
 			i: last.begin + 1,
 			flag: last.begin,
+			undo: undefined,
+			move: undefined,
+			current: undefined,
+			time: 1000
 		}
 	} else {
 		var tmp;
@@ -176,13 +221,18 @@ function ArgColor(start, color) {
 }
 
 Data.prototype.toCord = function(i) {
-	var n = Math.floor(focus.begin / this.line);
-	var m = focus.begin - n * this.line;
+	var n = Math.floor(i / this.line);
+	var m = i - n * this.line;
 	return {
 		n: n,
 		m: m
 	}
-}
+};
+
+Data.prototype.clear = function(i) {
+	var cord = this.toCord(i);
+	this.data[i].clear(cord.m, cord.n);
+};
 
 Data.prototype.refresh = function(color, args) {
 	this.line = Math.floor((frame.width - this.m2d) / this.dl);
@@ -231,7 +281,7 @@ Data.prototype.drawOther = function() {
 		this.refresh ("white", []);
 	}
 	this.strokeElement(last.begin, last.end, "black");
-}
+};
 
 Data.prototype.drawFocus = function() {
 	var focus = this.stack[this.stack.length - 1];
@@ -253,7 +303,7 @@ Data.prototype.drawFocus = function() {
 			n ++;
 		}
 	}
-}
+};
 
 Data.prototype.strokeElement = function(begin, end, color) {
 	bn = Math.floor(begin / this.line);
@@ -296,7 +346,7 @@ Data.prototype.strokeElement = function(begin, end, color) {
 		ctx.closePath();
 		ctx.stroke();
 	}
-}
+};
 
 function resizeCanvas() {
 	frame.width = window.innerWidth - 16;
@@ -319,7 +369,8 @@ function getValue(event) {
 }
 
 function sortData() {
-	data.id = setInterval('data.quickSort()', 1000);
+	data.id = setInterval("data.quickSort()", 1000);
+	data.moveId = setInterval("frames()", 40);
 	sort.disabled = true;
 	window.onresize = null;
 }
