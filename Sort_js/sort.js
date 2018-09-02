@@ -303,11 +303,13 @@ function path(begin, end, current, time) {
 }
 
 function setColor(color) {
-    ctx.font = "bold 12pt sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = color;
-    ctx.strokeStyle = color;
+    with(ctx) {
+        font = "bold 12pt sans-serif";
+        textAlign = "center";
+        textBaseline = "middle";
+        fillStyle = color;
+        strokeStyle = color;
+    }
 }
 
 function ArgColor(start, color) {
