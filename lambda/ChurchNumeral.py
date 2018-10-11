@@ -16,6 +16,21 @@ ToInt = lambda f: f(lambda n: n + 1)(0)
 FromInt = lambda n: lambda s: lambda z: (lambda f: (lambda x: x(x))(lambda x: f(lambda n: x(x)(n))))(
     lambda g: lambda n: z if n == 0 else s(g(n - 1)))(n)
 
+
+def pyPrint(*args, **kwargs):
+    print(*obj)
+    return lambda x: x()
+
+
+def PrintInt(function):
+    print(ToInt(function))
+    return lambda x: x()
+
+
+def InputInt(str):
+    return FromInt(int(input(str)))
+
+
 # operations
 # $ n s z. s (n s z)
 Inc = lambda n: lambda s: lambda z: s(n(s)(z))
@@ -30,15 +45,14 @@ Mul = lambda n: lambda m: lambda s: lambda z: n(m(s))(z)
 # $ n m s z: m n s z
 Exp = lambda n: lambda m: lambda s: lambda z: m(n)(s)(z)
 
-
 if __name__ == "__main__":
-    FOUR = FromInt(4)
-    print('Church numeral 0:', ToInt(ZERO))
-    print('Church numeral 1:', ToInt(ONE))
-    print('Church numeral 4:', ToInt(FOUR))
-    print('Church numeral operation Inc 4:', ToInt(Inc(FOUR)))
-    print('Church numeral operation Dec 4:', ToInt(Dec(FOUR)))
-    print('Church numeral operation Add 4 3:', ToInt(Add(FOUR)(THREE)))
-    print('Church numeral operation Sub 4 3:', ToInt(Sub(FOUR)(THREE)))
-    print('Church numeral operation Mul 4 3:', ToInt(Mul(FOUR)(THREE)))
-    print('Church numeral operation Exp 4 3:', ToInt(Exp(FOUR)(THREE)))
+    VAR = InputInt('Please input an integer: ')
+    print('Church numeral 0 :', ToInt(ZERO))
+    print('Church numeral 1 :', ToInt(ONE))
+    print('Church numeral', ToInt(VAR), ':', ToInt(VAR))
+    print('Church numeral operation Inc', ToInt(VAR), ':', ToInt(Inc(VAR)))
+    print('Church numeral operation Dec', ToInt(VAR), ':', ToInt(Dec(VAR)))
+    print('Church numeral operation Add', ToInt(VAR), '3 :', ToInt(Add(VAR)(THREE)))
+    print('Church numeral operation Sub', ToInt(VAR), '3 :', ToInt(Sub(VAR)(THREE)))
+    print('Church numeral operation Mul', ToInt(VAR), '3 :', ToInt(Mul(VAR)(THREE)))
+    print('Church numeral operation Exp', ToInt(VAR), '3 :', ToInt(Exp(VAR)(THREE)))
