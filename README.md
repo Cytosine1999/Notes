@@ -1,10 +1,10 @@
 # Notes
 Interesting stuff.
 
-Sort_js: a webpage demonstrates quick sort.
+Sort_js: a webpage quick sort demonstration.
 
-Othello_java: a command line game with a simple AI.
+Othello_java: a command line game with a simple AI (corrently not available).
 
-Alkane_enumeration: a programme calculate number of isomeride of alkane.
+Alkane_enumeration: a programme calculates number of isomeride of alkane.
 
-Lambda: lambda calculation demonstrates in python.
+Lambda: lambda calculation demonstration in python.
